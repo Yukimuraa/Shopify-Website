@@ -22,11 +22,11 @@ export default function CarouselControls({
         <ArrowLeft className="h-4 w-4" strokeWidth={1.4} />
       </button>
 
-      {/* Numbered Look Indicators: 01 02 03 04 05 06 */}
+      {/* Numbered Look Indicators: 01 .. 08 */}
       <div
         role="tablist"
         aria-label="Lookbook navigation"
-        className="flex items-center gap-3 sm:gap-5"
+        className="flex items-center gap-2 sm:gap-4"
       >
         {MODELS.map((model, idx) => {
           const isCurrent = idx === activeIndex;

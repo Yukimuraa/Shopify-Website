@@ -11,9 +11,9 @@ export default function CollectionHeading() {
           id="collection-title"
           className="text-xs font-medium tracking-[0.26em] text-[#111111] uppercase sm:text-sm"
         >
-          {COLLECTION_META.collection}
+          {COLLECTION_META.brand}
         </h1>
-        <p className="font-editorial text-base italic tracking-[0.02em] text-[#555555] sm:text-lg">
+        <p className="font-editorial text-base italic tracking-[0.06em] text-[#555555] sm:text-lg">
           {COLLECTION_META.subtitle}
         </p>
       </div>

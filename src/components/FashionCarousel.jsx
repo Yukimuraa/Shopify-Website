@@ -241,7 +241,7 @@ export default function FashionCarousel({ activeIndex = 0, onActiveChange }) {
   };
 
   return (
-    <section aria-label="Fall 26 Women Lookbook Carousel" className="flex flex-1 flex-col justify-end overflow-hidden">
+    <section aria-label="TEMPUS Lookbook Carousel" className="flex flex-1 flex-col justify-end overflow-hidden">
       {/* Perspective Depth Stage */}
       <div
         ref={stageRef}

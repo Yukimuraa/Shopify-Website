@@ -11,7 +11,7 @@ export default function ShoppingPanel({ activeModel }) {
   return (
     <aside
       aria-label="In this look shopping panel"
-      className="flex flex-col border-t border-black/[0.07] bg-[#f7f5f2] lg:sticky lg:top-16 lg:h-[calc(100dvh-4rem)] lg:border-t-0 lg:border-l"
+      className="hidden flex-col border-t border-black/[0.07] bg-[#f7f5f2] lg:sticky lg:top-16 lg:flex lg:h-[calc(100dvh-4rem)] lg:border-t-0 lg:border-l"
     >
       {/* Panel Header */}
       <div className="flex items-baseline justify-between border-b border-black/[0.06] px-6 py-5 sm:px-8">
@@ -56,7 +56,7 @@ export default function ShoppingPanel({ activeModel }) {
               Products will be added later.
             </p>
             <p className="mt-2 max-w-xs text-xs leading-relaxed text-[#777777]">
-              Explore Looks 01–04 in the carousel to shop individual outerwear and denim pieces from the Fall &apos;26 collection.
+              Explore Looks 01–04 in the carousel to shop individual outerwear and denim pieces from the TEMPUS collection.
             </p>
           </div>
         )}

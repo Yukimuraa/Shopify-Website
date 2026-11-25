@@ -2,18 +2,31 @@ import { Search, User, ShoppingBag } from 'lucide-react';
 import { COLLECTION_META } from '../data/models';
 import { useCart } from '../context/CartContext';
 
-export default function Header() {
+export default function Header({ onNavigateHome }) {
   const { totalItems, openBag, bagIconRef, bagPulseKey } = useCart();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-black/[0.06] bg-[#f7f5f2]/95 backdrop-blur-xs">
       <div className="mx-auto flex h-14 max-w-[1680px] items-center justify-between px-5 sm:h-16 sm:px-10 lg:px-14">
-        {/* Left: Brand Logo */}
+        {/* Left: Official Brand Logo & Wordmark */}
         <a
           href="#top"
-          className="font-editorial text-lg font-medium tracking-[0.22em] text-[#111111] transition-opacity duration-200 hover:opacity-70 sm:text-xl"
+          onClick={(e) => {
+            if (onNavigateHome) {
+              e.preventDefault();
+              onNavigateHome();
+            }
+          }}
+          className="flex items-center gap-2.5 text-[#111111] transition-opacity duration-200 hover:opacity-70"
         >
-          {COLLECTION_META.brand}
+          <img
+            src={COLLECTION_META.logo}
+            alt={`${COLLECTION_META.brand} logo`}
+            className="h-6 w-6 rounded-[6px] object-contain sm:h-7 sm:w-7"
+          />
+          <span className="font-editorial text-lg font-medium tracking-[0.22em] sm:text-xl">
+            {COLLECTION_META.brand}
+          </span>
         </a>
 
         {/* Center: Collection Name */}

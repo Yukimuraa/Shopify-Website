@@ -12,6 +12,7 @@
     color: #111111;
     font-family: var(--font-sans);
     overflow-x: hidden;
+    scroll-behavior: smooth;
   }
 }
 

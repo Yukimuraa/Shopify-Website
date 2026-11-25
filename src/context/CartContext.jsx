@@ -45,9 +45,10 @@ export function CartProvider({ children }) {
     setBagPulseKey((k) => k + 1);
   }, []);
 
-  const addItem = useCallback((product, size, quantity = 1) => {
+  const addItem = useCallback((product, size, quantity = 1, color = null) => {
     if (!product || !size || quantity < 1) return;
-    const key = `${product.id}__${size}`;
+    const colorKey = color || 'default';
+    const key = `${product.id}__${size}__${colorKey}`;
 
     setItems((prev) => {
       const existing = prev.find((item) => item.key === key);
@@ -67,6 +68,7 @@ export function CartProvider({ children }) {
           price: product.price,
           image: product.image,
           size,
+          color,
           quantity,
         },
       ];

@@ -99,6 +99,7 @@ export default function ShoppingBagDrawer() {
                         </h3>
                         <p className="mt-0.5 text-[11px] tracking-[0.14em] text-[#666666] uppercase">
                           Size {item.size}
+                          {item.color ? ` · ${item.color}` : ''}
                         </p>
                       </div>
                       <button
