@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { MODELS } from './data/models';
 import { getCollectionBySlug } from './data/collections';
+import { getStreetwearModelById } from './data/streetwear';
 import { CartProvider } from './context/CartContext';
 import Header from './components/Header';
 import CollectionHeading from './components/CollectionHeading';
@@ -10,27 +11,39 @@ import MobileLookStrip from './components/MobileLookStrip';
 import ShoppingBagDrawer from './components/ShoppingBagDrawer';
 import FlyingToBagLayer from './components/FlyingToBagLayer';
 import EditorialSection from './components/EditorialSection';
+import StreetwearSection from './components/StreetwearSection';
 import CollectionDetailView from './components/CollectionDetailView';
+import StreetwearDetailView from './components/StreetwearDetailView';
 
-function parseCollectionSlugFromHash() {
-  const match = window.location.hash.match(/^#\/collections\/([a-z0-9-]+)$/);
-  return match ? match[1] : null;
+function parseRouteFromHash() {
+  const hash = window.location.hash;
+  const colMatch = hash.match(/^#\/collections\/([a-z0-9-]+)$/);
+  if (colMatch) {
+    return { type: 'collection', slug: colMatch[1] };
+  }
+  const swMatch = hash.match(/^#\/streetwear\/([a-z0-9-]+)$/);
+  if (swMatch) {
+    return { type: 'streetwear', id: swMatch[1] };
+  }
+  return { type: 'home' };
 }
 
 export default function App() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [collectionSlug, setCollectionSlug] = useState(() =>
-    typeof window !== 'undefined' ? parseCollectionSlugFromHash() : null
+  const [route, setRoute] = useState(() =>
+    typeof window !== 'undefined' ? parseRouteFromHash() : { type: 'home' }
   );
+  const [selectedStreetwearId, setSelectedStreetwearId] = useState(null);
 
   const activeModel = MODELS[activeIndex] || MODELS[0];
-  const activeCollection = collectionSlug
-    ? getCollectionBySlug(collectionSlug)
-    : null;
+  const activeCollection =
+    route.type === 'collection' ? getCollectionBySlug(route.slug) : null;
+  const activeStreetwearModel =
+    route.type === 'streetwear' ? getStreetwearModelById(route.id) : null;
 
   useEffect(() => {
     const onHashChange = () => {
-      setCollectionSlug(parseCollectionSlugFromHash());
+      setRoute(parseRouteFromHash());
     };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
@@ -38,14 +51,31 @@ export default function App() {
 
   const openCollection = useCallback((collection) => {
     window.location.hash = `#/collections/${collection.slug}`;
-    setCollectionSlug(collection.slug);
+    setRoute({ type: 'collection', slug: collection.slug });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const openStreetwearModel = useCallback((model) => {
+    setSelectedStreetwearId(model.id);
+    window.location.hash = `#/streetwear/${model.id}`;
+    setRoute({ type: 'streetwear', id: model.id });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const closeCollection = useCallback(() => {
     window.location.hash = '#top';
-    setCollectionSlug(null);
+    setRoute({ type: 'home' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const backToStreetwearShowcase = useCallback(() => {
+    window.location.hash = '#streetwear-showcase';
+    setRoute({ type: 'home' });
+    setTimeout(() => {
+      document
+        .getElementById('streetwear-showcase')
+        ?.scrollIntoView({ behavior: 'smooth' });
+    }, 60);
   }, []);
 
   return (
@@ -57,6 +87,11 @@ export default function App() {
           <CollectionDetailView
             collection={activeCollection}
             onBack={closeCollection}
+          />
+        ) : activeStreetwearModel ? (
+          <StreetwearDetailView
+            model={activeStreetwearModel}
+            onBack={backToStreetwearShowcase}
           />
         ) : (
           <>
@@ -76,6 +111,10 @@ export default function App() {
             </main>
 
             <EditorialSection onSelectCollection={openCollection} />
+            <StreetwearSection
+              selectedModelId={selectedStreetwearId}
+              onSelectModel={openStreetwearModel}
+            />
           </>
         )}
 
