@@ -3,6 +3,7 @@ import { MODELS } from './data/models';
 import { getCollectionBySlug } from './data/collections';
 import { getStreetwearModelById } from './data/streetwear';
 import { CartProvider } from './context/CartContext';
+import LandingHero from './components/LandingHero';
 import Header from './components/Header';
 import CollectionHeading from './components/CollectionHeading';
 import FashionCarousel from './components/FashionCarousel';
@@ -35,6 +36,13 @@ export default function App() {
   );
   const [selectedStreetwearId, setSelectedStreetwearId] = useState(null);
 
+  // Skip landing if deep-linking directly to a collection or streetwear detail route
+  const [landingPhase, setLandingPhase] = useState(() => {
+    if (typeof window === 'undefined') return 'landing';
+    const initialRoute = parseRouteFromHash();
+    return initialRoute.type === 'home' ? 'landing' : 'entered';
+  });
+
   const activeModel = MODELS[activeIndex] || MODELS[0];
   const activeCollection =
     route.type === 'collection' ? getCollectionBySlug(route.slug) : null;
@@ -48,6 +56,14 @@ export default function App() {
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
+
+  const handleExploreCollection = useCallback(() => {
+    if (landingPhase !== 'landing') return;
+    setLandingPhase('transitioning');
+    setTimeout(() => {
+      setLandingPhase('entered');
+    }, 1300);
+  }, [landingPhase]);
 
   const openCollection = useCallback((collection) => {
     window.location.hash = `#/collections/${collection.slug}`;
@@ -78,9 +94,27 @@ export default function App() {
     }, 60);
   }, []);
 
+  const isCollectionVisible = landingPhase !== 'landing';
+
   return (
     <CartProvider>
-      <div id="top" className="flex min-h-dvh flex-col bg-[#f7f5f2] text-[#111111]">
+      {landingPhase !== 'entered' && (
+        <LandingHero
+          isExiting={landingPhase === 'transitioning'}
+          onExplore={handleExploreCollection}
+        />
+      )}
+
+      <div
+        id="top"
+        className={`flex min-h-dvh flex-col bg-[#f7f5f2] text-[#111111] transition-[opacity,transform] delay-[180ms] duration-[1150ms] ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[opacity,transform] motion-reduce:transition-none motion-reduce:delay-0 ${
+          landingPhase === 'transitioning' ? 'pointer-events-none' : ''
+        } ${
+          isCollectionVisible
+            ? 'translate-y-0 opacity-100'
+            : 'pointer-events-none translate-y-14 opacity-0'
+        }`}
+      >
         <Header onNavigateHome={closeCollection} />
 
         {activeCollection ? (
@@ -92,6 +126,7 @@ export default function App() {
           <StreetwearDetailView
             model={activeStreetwearModel}
             onBack={backToStreetwearShowcase}
+            onChangeModel={openStreetwearModel}
           />
         ) : (
           <>
@@ -102,6 +137,7 @@ export default function App() {
                 <FashionCarousel
                   activeIndex={activeIndex}
                   onActiveChange={setActiveIndex}
+                  isRevealed={isCollectionVisible}
                 />
               </div>
 

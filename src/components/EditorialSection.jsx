@@ -19,6 +19,7 @@ export default function EditorialSection({ onSelectCollection }) {
   const total = EDITORIAL_COLLECTIONS.length;
   const initialIndex = 1; // Start centered on Collection 02 so neighbors appear on both sides
 
+  const sectionRef = useRef(null);
   const targetRef = useRef(initialIndex);
   const currentRef = useRef(initialIndex);
   const wheelLockRef = useRef(0);
@@ -32,14 +33,43 @@ export default function EditorialSection({ onSelectCollection }) {
     hasMoved: false,
   });
 
+  const [hasRevealed, setHasRevealed] = useState(false);
   const [renderPos, setRenderPos] = useState(initialIndex);
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [isDragging, setIsDragging] = useState(false);
   const [layout, setLayout] = useState(() =>
     typeof window !== 'undefined'
       ? getCoverflowLayout(window.innerWidth)
-      : { cardWidth: 380, spacing: 345 }
+      : { cardWidth: 500, spacing: 455 }
   );
+
+  // Smooth once-only scroll-down reveal for Editorial Campaign — Four Chapters
+  useEffect(() => {
+    if (hasRevealed) return;
+    const el = sectionRef.current;
+    if (!el) return;
+
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setHasRevealed(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setHasRevealed(true);
+          observer.disconnect();
+        }
+      },
+      {
+        threshold: 0.14,
+        rootMargin: '0px 0px -80px 0px',
+      }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasRevealed]);
 
   useEffect(() => {
     const onResize = () => setLayout(getCoverflowLayout(window.innerWidth));
@@ -163,12 +193,17 @@ export default function EditorialSection({ onSelectCollection }) {
 
   return (
     <section
+      ref={sectionRef}
       aria-labelledby="editorial-campaigns-heading"
       className="w-full overflow-hidden border-t border-black/[0.06] bg-[#f7f5f2] py-16 sm:py-20 lg:py-24"
     >
       <div className="mx-auto max-w-[1680px] px-5 sm:px-10 lg:px-14">
         {/* Section Header */}
-        <div className="mb-10 flex flex-col gap-2 sm:mb-12 sm:flex-row sm:items-end sm:justify-between">
+        <div
+          className={`mb-10 flex flex-col gap-2 transition-[opacity,transform] delay-[160ms] duration-[1150ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none motion-reduce:delay-0 motion-reduce:translate-y-0 motion-reduce:opacity-100 sm:mb-12 sm:flex-row sm:items-end sm:justify-between ${
+            hasRevealed ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+          }`}
+        >
           <div>
             <p className="text-[10px] font-medium tracking-[0.26em] text-[#777777] uppercase">
               Editorial Campaign
@@ -196,9 +231,9 @@ export default function EditorialSection({ onSelectCollection }) {
         onMouseLeave={handlePointerUp}
         onWheel={handleWheel}
         style={{ height: `${stageHeight}px` }}
-        className={`relative mx-auto w-full max-w-[1680px] touch-pan-y select-none ${
+        className={`relative mx-auto w-full max-w-[1680px] touch-pan-y select-none transition-[opacity,transform] delay-[320ms] duration-[1250ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none motion-reduce:delay-0 motion-reduce:translate-y-0 motion-reduce:opacity-100 ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
-        }`}
+        } ${hasRevealed ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}
       >
         {EDITORIAL_COLLECTIONS.map((collection, idx) => {
           const offset = idx - renderPos;
@@ -251,7 +286,11 @@ export default function EditorialSection({ onSelectCollection }) {
       </div>
 
       {/* Active Collection Information & Navigation Controls */}
-      <div className="mx-auto mt-8 flex max-w-[1680px] flex-col items-center px-5 text-center sm:mt-10 sm:px-10 lg:px-14">
+      <div
+        className={`mx-auto mt-8 flex max-w-[1680px] flex-col items-center px-5 text-center transition-[opacity,transform] delay-[460ms] duration-[1150ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none motion-reduce:delay-0 motion-reduce:translate-y-0 motion-reduce:opacity-100 sm:mt-10 sm:px-10 lg:px-14 ${
+          hasRevealed ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+        }`}
+      >
         <div
           key={activeCollection.id}
           className="flex flex-col items-center animate-[fadeIn_320ms_ease-out]"

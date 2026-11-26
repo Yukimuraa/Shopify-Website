@@ -10,7 +10,11 @@ function getResponsiveSpacing(width) {
   return 146;
 }
 
-export default function FashionCarousel({ activeIndex = 0, onActiveChange }) {
+export default function FashionCarousel({
+  activeIndex = 0,
+  onActiveChange,
+  isRevealed = true,
+}) {
   const stageRef = useRef(null);
 
   const targetRef = useRef(activeIndex);
@@ -206,14 +210,15 @@ export default function FashionCarousel({ activeIndex = 0, onActiveChange }) {
   };
 
   const handleWheel = (e) => {
-    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    if (Math.abs(delta) < 8) return;
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 8) {
+      return;
+    }
 
     const now = performance.now();
     if (now - wheelLockRef.current < 260) return;
     wheelLockRef.current = now;
 
-    goTo(activeIndex + (delta > 0 ? 1 : -1));
+    goTo(activeIndex + (e.deltaX > 0 ? 1 : -1));
   };
 
   const handleSelectModel = (idx, id) => {
@@ -270,18 +275,27 @@ export default function FashionCarousel({ activeIndex = 0, onActiveChange }) {
         )}
 
         {MODELS.map((model, idx) => (
-          <ModelSlide
+          <div
             key={model.id}
-            model={model}
-            offset={idx - renderPos}
-            spacing={spacing}
-            isSelected={selectedId === model.id}
-            isFocused={focusMode && idx === activeIndex}
-            focusMode={focusMode}
-            isDragging={isDragging}
-            onSelect={() => handleSelectModel(idx, model.id)}
-            onDoubleClick={() => handleDoubleClickModel(idx, model.id)}
-          />
+            style={{
+              transitionDelay: isRevealed ? `${180 + idx * 85}ms` : '0ms',
+            }}
+            className={`pointer-events-none absolute inset-0 transition-[opacity,transform] duration-[950ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none motion-reduce:translate-y-0 motion-reduce:opacity-100 ${
+              isRevealed ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
+            }`}
+          >
+            <ModelSlide
+              model={model}
+              offset={idx - renderPos}
+              spacing={spacing}
+              isSelected={selectedId === model.id}
+              isFocused={focusMode && idx === activeIndex}
+              focusMode={focusMode}
+              isDragging={isDragging}
+              onSelect={() => handleSelectModel(idx, model.id)}
+              onDoubleClick={() => handleDoubleClickModel(idx, model.id)}
+            />
+          </div>
         ))}
       </div>
 

@@ -1,11 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Minus, Plus } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowRight, Check, Minus, Plus } from 'lucide-react';
 import { formatPrice, getProductsForModel } from '../data/products';
+import { STREETWEAR_MODELS } from '../data/streetwear';
 import { useCart } from '../context/CartContext';
 
-export default function StreetwearDetailView({ model, onBack }) {
+export default function StreetwearDetailView({ model, onBack, onChangeModel }) {
   const { addItem, triggerFlyToBag } = useCart();
   const products = getProductsForModel(model.id);
+  const currentModelIndex = STREETWEAR_MODELS.findIndex((m) => m.id === model.id);
+  const nextModel =
+    currentModelIndex >= 0 && currentModelIndex < STREETWEAR_MODELS.length - 1
+      ? STREETWEAR_MODELS[currentModelIndex + 1]
+      : null;
 
   // Slide 0 = Complete Model, Slide 1 = Top (T-Shirt / Hoodie), Slide 2 = Bottoms (Pants / Sweatpants)
   const slides = useMemo(
@@ -30,14 +36,16 @@ export default function StreetwearDetailView({ model, onBack }) {
   );
 
   const [slideIndex, setSlideIndex] = useState(0);
+  const [scrollDir, setScrollDir] = useState('down');
   const [selectedSize, setSelectedSize] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [sizeError, setSizeError] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
   const activeImgRef = useRef(null);
-  const dragRef = useRef({ isDown: false, startX: 0 });
+  const dragRef = useRef({ isDown: false, startX: 0, startY: 0 });
   const wheelLockRef = useRef(0);
+  const verticalLockRef = useRef(0);
 
   const currentSlide = slides[slideIndex] || slides[0];
   const activeProduct =
@@ -64,31 +72,64 @@ export default function StreetwearDetailView({ model, onBack }) {
     [slides.length]
   );
 
-  // Keyboard Left/Right navigation
+  const stepModel = useCallback(
+    (delta) => {
+      if (!onChangeModel || currentModelIndex < 0) return;
+      const nextIdx = currentModelIndex + delta;
+      if (nextIdx >= 0 && nextIdx < STREETWEAR_MODELS.length) {
+        setScrollDir(delta >= 0 ? 'down' : 'up');
+        onChangeModel(STREETWEAR_MODELS[nextIdx]);
+      }
+    },
+    [currentModelIndex, onChangeModel]
+  );
+
+  // Keyboard navigation: Left/Right for clothing slides, Up/Down for Models 09–12
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key === 'ArrowRight') {
         goToSlide(slideIndex + 1);
       } else if (e.key === 'ArrowLeft') {
         goToSlide(slideIndex - 1);
+      } else if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+        e.preventDefault();
+        stepModel(1);
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault();
+        stepModel(-1);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [slideIndex, goToSlide]);
+  }, [slideIndex, goToSlide, stepModel]);
+
+  // Vertical scroll-down / scroll-up transitions cleanly between Models 09 -> 10 -> 11 -> 12
+  const handlePageWheel = (e) => {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX) || Math.abs(e.deltaY) < 24) {
+      return;
+    }
+    const now = performance.now();
+    if (now - verticalLockRef.current < 700) return;
+    verticalLockRef.current = now;
+    stepModel(e.deltaY > 0 ? 1 : -1);
+  };
 
   // Controlled single-step pointer drag / touch swipe
   const handlePointerDown = (e) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
-    dragRef.current = { isDown: true, startX: e.clientX };
+    dragRef.current = { isDown: true, startX: e.clientX, startY: e.clientY };
   };
 
   const handlePointerMove = (e) => {
     if (!dragRef.current.isDown) return;
     const dx = e.clientX - dragRef.current.startX;
-    if (Math.abs(dx) > 42) {
+    const dy = e.clientY - dragRef.current.startY;
+    if (Math.abs(dx) > 42 && Math.abs(dx) > Math.abs(dy)) {
       dragRef.current.isDown = false;
       goToSlide(slideIndex + (dx < 0 ? 1 : -1));
+    } else if (Math.abs(dy) > 56 && Math.abs(dy) > Math.abs(dx)) {
+      dragRef.current.isDown = false;
+      stepModel(dy < 0 ? 1 : -1);
     }
   };
 
@@ -96,14 +137,15 @@ export default function StreetwearDetailView({ model, onBack }) {
     dragRef.current.isDown = false;
   };
 
-  // Controlled trackpad / wheel horizontal scroll (one slide per gesture)
+  // Controlled trackpad horizontal scroll (one clothing slide per gesture)
   const handleWheel = (e) => {
-    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    if (Math.abs(delta) < 12) return;
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 12) {
+      return;
+    }
     const now = performance.now();
     if (now - wheelLockRef.current < 420) return;
     wheelLockRef.current = now;
-    goToSlide(slideIndex + (delta > 0 ? 1 : -1));
+    goToSlide(slideIndex + (e.deltaX > 0 ? 1 : -1));
   };
 
   const handleAddToBag = () => {
@@ -120,9 +162,20 @@ export default function StreetwearDetailView({ model, onBack }) {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-[1680px] flex-1 flex-col px-5 py-6 animate-[fadeIn_360ms_ease-out] motion-reduce:animate-none sm:px-10 sm:py-8 lg:px-14">
-      {/* Top Back Navigation */}
-      <div className="mb-4 flex items-center justify-between">
+    <main
+      onWheel={handlePageWheel}
+      className="mx-auto flex w-full max-w-[1680px] flex-1 flex-col overflow-hidden px-5 py-6 sm:px-10 sm:py-8 lg:px-14"
+    >
+      <div
+        key={model.id}
+        className={`flex flex-1 flex-col motion-reduce:animate-none ${
+          scrollDir === 'up'
+            ? 'animate-[slideDownIn_650ms_cubic-bezier(0.16,1,0.3,1)]'
+            : 'animate-[slideUpIn_650ms_cubic-bezier(0.16,1,0.3,1)]'
+        }`}
+      >
+      {/* Top Back Navigation & Model 09–12 Stepper */}
+      <div className="mb-4 flex items-center justify-between gap-4">
         <button
           type="button"
           onClick={onBack}
@@ -132,10 +185,32 @@ export default function StreetwearDetailView({ model, onBack }) {
           <span>Back to Lookbook</span>
         </button>
 
-        <span className="text-[10px] font-medium tracking-[0.24em] text-[#777777] uppercase tabular-nums">
-          {model.label} · {String(slideIndex + 1).padStart(2, '0')} /{' '}
-          {String(slides.length).padStart(2, '0')}
-        </span>
+        <div className="flex items-center gap-3">
+          <div className="hidden items-center gap-2 sm:flex" aria-label="Streetwear models">
+            {STREETWEAR_MODELS.map((m, mIdx) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => {
+                  setScrollDir(mIdx >= currentModelIndex ? 'down' : 'up');
+                  onChangeModel?.(m);
+                }}
+                className={`text-[10px] tracking-[0.2em] uppercase transition-colors ${
+                  m.id === model.id
+                    ? 'border-b border-[#111111] font-medium text-[#111111]'
+                    : 'text-[#888888] hover:text-[#111111]'
+                }`}
+              >
+                {m.id.replace('model-', '')}
+              </button>
+            ))}
+          </div>
+
+          <span className="text-[10px] font-medium tracking-[0.24em] text-[#777777] uppercase tabular-nums">
+            {model.label} · {String(slideIndex + 1).padStart(2, '0')} /{' '}
+            {String(slides.length).padStart(2, '0')}
+          </span>
+        </div>
       </div>
 
       {/* Three-Column Layout:
@@ -396,6 +471,21 @@ export default function StreetwearDetailView({ model, onBack }) {
             </div>
           )}
         </section>
+      </div>
+
+      {/* Subtle Scroll-Down Hint for Next Streetwear Model */}
+      {nextModel && (
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            onClick={() => stepModel(1)}
+            className="inline-flex cursor-pointer items-center gap-2 text-[10px] tracking-[0.22em] text-[#777777] uppercase transition-colors hover:text-[#111111]"
+          >
+            <span>Scroll down for {nextModel.label}</span>
+            <ArrowDown className="h-3 w-3" strokeWidth={1.4} />
+          </button>
+        </div>
+      )}
       </div>
     </main>
   );
