@@ -22,11 +22,13 @@ export default function FashionCarousel({
   const dragRef = useRef({
     isDown: false,
     startX: 0,
+    startY: 0,
     lastX: 0,
     lastTime: 0,
     startTarget: activeIndex,
     velocity: 0,
     hasMoved: false,
+    axisLocked: null,
   });
 
   const isPausedRef = useRef(false);
@@ -158,7 +160,7 @@ export default function FashionCarousel({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [activeIndex, focusMode, goTo]);
 
-  // Pointer drag (mouse + touch) with momentum release
+  // Pointer drag (mouse + touch) with axis lock & smooth momentum release
   const handlePointerDown = (e) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     if (focusMode) return;
@@ -167,11 +169,13 @@ export default function FashionCarousel({
     dragRef.current = {
       isDown: true,
       startX: e.clientX,
+      startY: e.clientY,
       lastX: e.clientX,
       lastTime: performance.now(),
       startTarget: currentRef.current,
       velocity: 0,
       hasMoved: false,
+      axisLocked: null,
     };
     setIsDragging(true);
   };
@@ -183,6 +187,17 @@ export default function FashionCarousel({
     const dt = Math.max(1, now - dragRef.current.lastTime);
     const dxFromLast = e.clientX - dragRef.current.lastX;
     const dxTotal = e.clientX - dragRef.current.startX;
+    const dyTotal = e.clientY - dragRef.current.startY;
+
+    // Lock axis on touch/drag so vertical page scroll never fights horizontal swipe
+    if (!dragRef.current.axisLocked && (Math.abs(dxTotal) > 6 || Math.abs(dyTotal) > 6)) {
+      if (Math.abs(dyTotal) > Math.abs(dxTotal) * 1.2) {
+        dragRef.current.isDown = false;
+        setIsDragging(false);
+        return;
+      }
+      dragRef.current.axisLocked = 'x';
+    }
 
     if (Math.abs(dxTotal) > 6) {
       dragRef.current.hasMoved = true;
@@ -193,7 +208,7 @@ export default function FashionCarousel({
     dragRef.current.lastTime = now;
 
     const nextTarget = dragRef.current.startTarget - dxTotal / spacing;
-    const clamped = Math.max(-0.25, Math.min(MODELS.length - 0.75, nextTarget));
+    const clamped = Math.max(-0.2, Math.min(MODELS.length - 0.8, nextTarget));
     targetRef.current = clamped;
     onActiveChange?.(Math.max(0, Math.min(MODELS.length - 1, Math.round(clamped))));
   };
@@ -201,21 +216,22 @@ export default function FashionCarousel({
   const handlePointerUp = () => {
     if (!dragRef.current.isDown) return;
     dragRef.current.isDown = false;
+    dragRef.current.axisLocked = null;
     setIsDragging(false);
 
-    const projected = targetRef.current + dragRef.current.velocity * 1.4;
+    const projected = targetRef.current + dragRef.current.velocity * 1.1;
     const snapped = Math.max(0, Math.min(MODELS.length - 1, Math.round(projected)));
     updateActive(snapped);
     pauseAuto(4500);
   };
 
   const handleWheel = (e) => {
-    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 8) {
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) || Math.abs(e.deltaX) < 12) {
       return;
     }
 
     const now = performance.now();
-    if (now - wheelLockRef.current < 260) return;
+    if (now - wheelLockRef.current < 320) return;
     wheelLockRef.current = now;
 
     goTo(activeIndex + (e.deltaX > 0 ? 1 : -1));
